@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Смета съёмок — v7.4.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --muted:#9ca3af; --line:#1f2937;
+    --brand:#7c3aed; --brand2:#ec4899; --text:#e5e7eb; --ink:#1f2937;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; padding:24px;
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: radial-gradient(1200px 500px at 70% -10%, rgba(124,58,237,.25), transparent),
+               radial-gradient(800px 400px at 10% -10%, rgba(236,72,153,.18), transparent),
+               var(--bg);
+    color:var(--text);
+  }
+  h1{margin:0 0 16px; font-size:28px; font-weight:800; letter-spacing:.2px;}
+  .wrap{max-width:1100px; margin:0 auto;}
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.02)), var(--card);
+    border:1px solid var(--line);
+    border-radius:18px; padding:18px; margin-bottom:16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .grid{display:grid; grid-template-columns: repeat(12, 1fr); gap:12px;}
+  label{font-size:12px; color:var(--muted); display:block; margin-bottom:6px;}
+  input[type="text"], input[type="number"], input[type="date"], select, textarea{
+    width:100%; padding:12px 12px; border:1px solid var(--line); border-radius:12px;
+    background:#0b1220; color:#var(--text); font-size:14px; outline:none;
+  }
+  textarea{min-height:90px; resize:vertical;}
+  select{appearance:none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+         background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+         background-size:6px 6px, 6px 6px; background-repeat:no-repeat;}
+  .header-title{display:flex; align-items:center; justify-content:space-between;}
+  .badge{font-size:12px; color:white; padding:6px 10px; border-radius:999px;
+         background: linear-gradient(90deg, var(--brand), var(--brand2));}
+  .muted{color:var(--muted); font-size:12px;}
+  .cat-header{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .cat-header h2{margin:0; font-size:18px;}
+  .btn{
+    appearance:none; border:1px solid transparent; background: linear-gradient(90deg, var(--brand), var(--brand2));
+    color:#fff; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:700; letter-spacing:.2px;
+    box-shadow: 0 6px 16px rgba(124,58,237,.35);
+  }
+  .btn.ghost{background:#0b1220; border-color:#2b3447; color:#c7d2fe; box-shadow:none;}
+  .btn.danger{background:#3f1b1b; border-color:#7f1d1d; color:#fecaca; box-shadow:none;}
+  .btn.small{padding:8px 10px; font-size:12px;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin-top:10px; overflow:hidden; border-radius:14px; border:1px solid var(--line); table-layout:fixed;}
+  th, td{padding:10px; text-align:center; font-size:14px; border-bottom:1px solid var(--line); vertical-align:top;}
+  th{background:#0b1220; color:#cbd5e1; font-weight:700;}
+  tr:last-child td{border-bottom:none;}
+  td[contenteditable="true"]{outline:none; background:#0b1220;}
+  td:nth-child(1){text-align:left; word-break:break-word; white-space:normal;}
+  .total{ text-align:right; margin-top:10px; font-weight:800;}
+  .kpis{display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;}
+  .kpi{flex:1 1 180px; background:#0b1220; border:1px solid var(--line); border-radius:12px; padding:10px 12px;}
+  .kpi .label{color:var(--muted); font-size:12px;}
+  .kpi .value{font-size:20px; font-weight:800;}
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+  .note{color:var(--muted); font-size:12px; margin-top:6px;}
+  .chip{display:inline-block; padding:2px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cbd5e1;}
+</style>
+
+<style>
+body, input, select, textarea, button, table, th, td, label, h1, h2, h3, h4, h5, h6, p, span, div {
+    color: white !important;
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="header-title">
+      <h1>Смета съёмок</h1>
+      <div class="badge">v7.4.0</div>
+    </div>
+    <div class="grid">
+      <div style="grid-column: span 4;">
+        <label>Название проекта</label>
+        <input id="projectName" type="text" placeholder="Например: Реклама кофе «Утро»" oninput="saveState();updateTotals()">
+      </div>
+      <div style="grid-column: span 3;">
+        <label>Клиент</label>
+        <input id="clientName" type="text" placeholder="Название компании/заказчика" oninput="saveState()">
+      </div>
+      <div style="grid-column: span 3;">
+        <label>Локация съёмки</label>
+        <input id="shootLocation" type="text" placeholder="Адрес/площадка" oninput="saveState()">
+      </div>
+      <div style="grid-column: span 2;">
+        <label>Дата заполнения</label>
+        <input id="fillDate" type="date" oninput="saveState()">
+      </div>
+      <div style="grid-column: span 3;">
+        <label>Дата съёмки</label>
+        <input id="shootDate" type="date" oninput="saveState()">
+      </div>
+      <div style="grid-column: span 1;">
+        <label>Смены</label>
+        <input id="shifts" type="number" min="1" value="1" oninput="saveState();updateTotals()">
+      </div>
+      <div style="grid-column: span 2;">
+        <label>Скидка, %</label>
+        <input id="discountPct" type="number" min="0" max="100" value="0" oninput="saveState();updateTotals()">
+      </div>
+      <div style="grid-column: span 12;">
+        <label>Комментарий (в экспорт внизу)</label>
+        <textarea id="comment" placeholder="Условия аренды, логистика, сроки и т.п." oninput="saveState()"></textarea>
+      </div>
+    </div>
+    <div class="note">Скидка применяется ко всем разделам, <b>кроме «Постпродакшн»</b>. Смены учитываются во всех разделах, кроме «Постпродакшн».</div>
+    <div class="actions">
+      <button class="btn ghost small" onclick="openPresets()">Список оборудования</button>
+      <button class="btn ghost small" onclick="addAllDefaultRows()">Добавить по строке в каждую категорию</button>
+      <button class="btn" onclick="downloadWordHTML()">Скачать Word (HTML, A4)</button>
+    </div>
+  </div>
+
+  <div id="categories"></div>
+
+  <div class="card">
+    <div class="kpis">
+      <div class="kpi"><div class="label">Подытог (все категории)</div><div id="subtotalKpi" class="value">0 ₽</div></div>
+      <div class="kpi"><div class="label">Скидка (кроме постпрод.)</div><div id="discountKpi" class="value">0 ₽</div></div>
+      <div class="kpi"><div class="label">Итого к оплате</div><div id="grandKpi" class="value">0 ₽</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Editable Presets modal -->
+<dialog id="presetsDialog" class="modal" style="border:none;border-radius:16px;overflow:hidden;width:860px;max-width:96vw;">
+  <div class="head" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);background:#0b1220;">
+    <div style="font-weight:800">Список оборудования</div>
+    <button class="btn ghost small" onclick="closePresets()">Закрыть</button>
+  </div>
+  <div class="body" style="padding:16px;max-height:70vh;overflow:auto;background:#0b1220;">
+    <div class="muted" style="margin-bottom:8px">Добавляй/редактируй позиции и ставки. Всё сохраняется локально.</div>
+    <div class="grid">
+      <div style="grid-column: span 6;"><div class="chip">Камеры</div><div id="camerasPresetList"></div><button class="btn ghost small" onclick="addPresetRow('cameras')">+ Добавить</button></div>
+      <div style="grid-column: span 6;"><div class="chip">Оптика</div><div id="opticsPresetList"></div><button class="btn ghost small" onclick="addPresetRow('optics')">+ Добавить</button></div>
+      <div style="grid-column: span 6;"><div class="chip">Свет</div><div id="lightPresetList"></div><button class="btn ghost small" onclick="addPresetRow('light')">+ Добавить</button></div>
+      <div style="grid-column: span 6;"><div class="chip">Звук</div><div id="soundPresetList"></div><button class="btn ghost small" onclick="addPresetRow('sound')">+ Добавить</button></div>
+      <div style="grid-column: span 6;"><div class="chip">Штативы</div><div id="tripodsPresetList"></div><button class="btn ghost small" onclick="addPresetRow('tripods')">+ Добавить</button></div>
+      <div style="grid-column: span 6;"><div class="chip">Стабилизаторы</div><div id="stabilizersPresetList"></div><button class="btn ghost small" onclick="addPresetRow('stabilizers')">+ Добавить</button></div>
+      <div style="grid-column: span 6;"><div class="chip">Другое</div><div id="genericPresetList"></div><button class="btn ghost small" onclick="addPresetRow('generic')">+ Добавить</button></div>
+      <div style="grid-column: span 6;"><div class="chip">Постпродакшн</div><div id="postPresetList"></div><button class="btn ghost small" onclick="addPresetRow('post')">+ Добавить</button></div>
+      <div style="grid-column: span 12;"><div class="chip">Роли (Люди)</div><div id="rolesPresetList"></div><button class="btn ghost small" onclick="addRoleRow()">+ Добавить роль</button></div>
+    </div>
+  </div>
+  <div class="foot" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:#0b1220;">
+    <button class="btn ghost" onclick="resetPresets()">Сбросить</button>
+    <button class="btn" onclick="savePresets()">Сохранить</button>
+  </div>
+</dialog>
+
+<script>
+// ---- Base Lists ----
+const baseLists = {
+  cameras: ["Sony ILME-FX3 body","Sony ILME-FX30 body","Sony Alpha 7C body","Sony A7 IV body","Sony A7 III body","GoPro Hero 11 Black","GoPro Hero 12 Black"],
+  optics: ["Sony FE 2.8/24-70 GM II","Sony FE 2.8/70-200 GM OSS II","Sony FE 28-60 f/4-5.6","Tamron 11-20 f/2.8","Tamron 17-28 F/2.8","Tamron 28-75mm f/2.8 Di III","Tamron 70-180mm f/2.8","Sirui 50 F1.8 1.33x"],
+  light: ["GODOX SL200","GODOX TL60","ZHIYUN MOLUS 100W","Вспышка GODOX V1S","Синхронизатор GODOX XProS"],
+  sound: ["Радиосистема DJI MIC (2TX + 1 RX)","Радиосистема Sennheiser EW G4","Рекордер ZOOM H8","Рекордер ZOOM H4n","Накамерный микрофон SENNHEISER MKE 400","Накамерный микрофон Saramonic Vmic5 Pro","Накамерный микрофон RODE VideoMic","Накамерный микрофон BOYA","Накамерный микрофон COMICA CVM-VM10II","Проводной микрофон RODE Lavalier Go","Проводной микрофон GODOX","Проводной микрофон BOYA"],
+  tripods: ["Manfrotto 546GB","Manfrotto MVT502AM","Benro KH25","Manfrotto (маленький с подвижной головой)","Монопод Manfrotto MVMXPRO500","Монопод Manfrotto MPMXPROC4"],
+  stabilizers: ["DJI RONIN RS3 PRO COMBO","DJI RONIN RS3 PRO","DJI RONIN RS2","DJI RONIN SC2"],
+  generic: [],
+  post: ["Монтаж","Графика","Цветокоррекция"],
+  roles: ["Оператор-постановщик","Оператор","Звукорежиссёр","Ассистент оператора","Гафер","Грип"]
+};
+
+// ---- Default price presets ----
+const defaultPresets = {
+  cameras: {"Sony ILME-FX3 body":4170,"Sony ILME-FX30 body":3980,"Sony Alpha 7C body":0,"Sony A7 IV body":5350,"Sony A7 III body":3550,"GoPro Hero 11 Black":1790,"GoPro Hero 12 Black":2000},
+  optics: {"Sony FE 2.8/24-70 GM II":0,"Sony FE 2.8/70-200 GM OSS II":0,"Sony FE 28-60 f/4-5.6":0,"Tamron 11-20 f/2.8":0,"Tamron 17-28 F/2.8":0,"Tamron 28-75mm f/2.8 Di III":0,"Tamron 70-180mm f/2.8":0,"Sirui 50 F1.8 1.33x":0},
+  light: {"GODOX SL200":1340,"GODOX TL60":2090,"ZHIYUN MOLUS 100W":1790,"Вспышка GODOX V1S":0,"Синхронизатор GODOX XProS":285},
+  sound: {"Радиосистема DJI MIC (2TX + 1 RX)":800,"Радиосистема Sennheiser EW G4":1590,"Рекордер ZOOM H8":2090,"Рекордер ZOOM H4n":1200,"Накамерный микрофон SENNHEISER MKE 400":900,"Накамерный микрофон Saramonic Vmic5 Pro":0,"Накамерный микрофон RODE VideoMic":0,"Накамерный микрофон BOYA":0,"Накамерный микрофон COMICA CVM-VM10II":0,"Проводной микрофон RODE Lavalier Go":0,"Проводной микрофон GODOX":0,"Проводной микрофон BOYA":0},
+  tripods: {"Manfrotto 546GB":2085,"Manfrotto MVT502AM":0,"Benro KH25":0,"Manfrotto (маленький с подвижной головой)":0,"Монопод Manfrotto MVMXPRO500":0,"Монопод Manfrotto MPMXPROC4":0},
+  stabilizers: {"DJI RONIN RS3 PRO COMBO":0,"DJI RONIN RS3 PRO":0,"DJI RONIN RS2":3190,"DJI RONIN SC2":450},
+  generic: {},
+  post: {"Монтаж":0,"Графика":0,"Цветокоррекция":0},
+  roles: {"Оператор-постановщик":0,"Оператор":0,"Звукорежиссёр":0,"Ассистент оператора":0,"Гафер":0,"Грип":0}
+};
+
+// ---- Storage helpers ----
+function getPresets(){
+  try{
+    const raw = localStorage.getItem('pricePresets_v731'); const parsed = raw?JSON.parse(raw):{};
+    const merged = {};
+    for(const key of Object.keys(defaultPresets)){ merged[key] = Object.assign({}, defaultPresets[key], parsed[key]||{}); }
+    return merged;
+  }catch(e){ return JSON.parse(JSON.stringify(defaultPresets)); }
+}
+function setPresets(p){ localStorage.setItem('pricePresets_v731', JSON.stringify(p)); }
+
+function getCustomLists(){
+  try{
+    const raw = localStorage.getItem('customLists_v731'); const parsed = raw?JSON.parse(raw):{};
+    const base = {cameras:[],optics:[],light:[],sound:[],tripods:[],stabilizers:[],generic:[],post:[],roles:[]};
+    return Object.assign(base, parsed);
+  }catch(e){ return {cameras:[],optics:[],light:[],sound:[],tripods:[],stabilizers:[],generic:[],post:[],roles:[]}; }
+}
+function setCustomLists(obj){ localStorage.setItem('customLists_v731', JSON.stringify(obj)); }
+
+// ---- UI helpers ----
+function currency(n){ return (Number(n)||0).toLocaleString('ru-RU') + " ₽"; }
+function createSelect(list){ const s=document.createElement('select'); list.forEach(op=>{const o=document.createElement('option'); o.value=op;o.textContent=op;s.appendChild(o);}); return s; }
+
+function mergedListFor(type){
+  const customs = getCustomLists(); const arr = (baseLists[type]||[]).slice();
+  (customs[type]||[]).forEach(n=>{ if(!arr.includes(n)) arr.push(n); });
+  arr.push("Другое…");
+  return arr;
+}
+function createNameCell(type){
+  const td=document.createElement('td');
+  const merged = mergedListFor(type);
+  const sel=createSelect(merged);
+  const input=document.createElement('input'); input.type='text'; input.placeholder='Новая позиция'; input.style="display:none;margin-top:6px;";
+  sel.addEventListener('change', ()=>{
+    input.style.display = (sel.value==="Другое…") ? 'block' : 'none';
+    autofillPriceFromPreset(sel.value, td.parentElement, type);
+    saveState(); updateTotals();
+  });
+  input.addEventListener('input', ()=>{ saveState(); updateTotals(); });
+  td.appendChild(sel); td.appendChild(input);
+  return td;
+}
+function getNameFromCell(td){
+  const sel=td.querySelector('select');
+  if(sel){ if(sel.value==="Другое…"){ const input=td.querySelector('input'); return (input && input.value.trim())?input.value.trim():"Другое"; } return sel.value; }
+  return td.textContent.trim();
+}
+
+function createCategory(conf){
+  const card=document.createElement('div'); card.className='card';
+  const priceHeader=conf.shiftBased?"Цена за смену (₽)":"Цена (₽)";
+  const sumNote=conf.shiftBased?"Цена × Кол-во × Смены":"Цена × Кол-во";
+  card.innerHTML=`
+    <div class="cat-header">
+      <h2>${conf.name}</h2>
+      <div><button class="btn ghost small" onclick="addRow(this)">+ Добавить позицию</button></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:46%;">Название</th>
+        <th style="width:18%;">${priceHeader}</th>
+        <th style="width:12%;">Кол-во</th>
+        <th style="width:14%;">Сумма <span class="muted">(${sumNote})</span></th>
+        <th style="width:10%;"></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="total">Итого (${conf.name}): <span>0</span></div>`;
+  card.dataset.shiftBased=conf.shiftBased?"1":"0"; card.dataset.type=conf.type; card.dataset.discountEligible = conf.discountEligible ? "1" : "0";
+  document.getElementById('categories').appendChild(card);
+}
+
+function addRow(btn){
+  const card=btn.closest('.card'); const tbody=card.querySelector('tbody'); const type=card.dataset.type;
+  const tr=document.createElement('tr');
+  const nameTd=createNameCell(type);
+  const priceTd=document.createElement('td'); priceTd.contentEditable="true"; priceTd.textContent="0"; priceTd.addEventListener('input', ()=>{ saveState(); updateTotals(); });
+  const qtyTd=document.createElement('td'); qtyTd.contentEditable="true"; qtyTd.textContent="1"; qtyTd.addEventListener('input', ()=>{ saveState(); updateTotals(); });
+  const sumTd=document.createElement('td'); sumTd.textContent="0";
+  const delTd=document.createElement('td'); const delBtn=document.createElement('button'); delBtn.className='btn danger small'; delBtn.textContent='Удалить'; delBtn.onclick=()=>{ tr.remove(); saveState(); updateTotals(); }; delTd.appendChild(delBtn);
+  tr.appendChild(nameTd); tr.appendChild(priceTd); tr.appendChild(qtyTd); tr.appendChild(sumTd); tr.appendChild(delTd);
+  tbody.appendChild(tr); saveState(); updateTotals();
+}
+
+function addAllDefaultRows(){ document.querySelectorAll(".cat-header .btn.small").forEach(b=>addRow(b)); }
+
+function getNumberFromCellTd(td){ const raw=(td.innerText||td.textContent||"").replace(/[^\d,. -]/g,'').replace(',', '.'); const num=parseFloat(raw); return isNaN(num)?0:num; }
+
+function updateTotals(){
+  const shifts=parseFloat(document.getElementById('shifts').value)||0; 
+  let subtotalAll=0, eligible=0, ineligible=0;
+  document.querySelectorAll('#categories > .card').forEach(card=>{
+    const shiftBased=card.dataset.shiftBased==="1"; const isEligible = card.dataset.discountEligible==="1";
+    let catTotal=0;
+    card.querySelectorAll('tbody tr').forEach(tr=>{
+      const price=getNumberFromCellTd(tr.cells[1]); const qty=getNumberFromCellTd(tr.cells[2]);
+      let sum=price*qty; if(shiftBased) sum*=shifts; tr.cells[3].textContent=isFinite(sum)?sum.toFixed(2):"0"; catTotal+=isFinite(sum)?sum:0;
+    });
+    card.querySelector('.total span').textContent = currency(catTotal);
+    subtotalAll+=catTotal;
+    if(isEligible) eligible+=catTotal; else ineligible+=catTotal;
+  });
+  const discountPct=Math.min(100, Math.max(0, parseFloat(document.getElementById('discountPct').value)||0));
+  const discount=eligible*discountPct/100; 
+  const grand=Math.max(0, eligible - discount + ineligible);
+  document.getElementById('subtotalKpi').textContent=currency(subtotalAll);
+  document.getElementById('discountKpi').textContent=currency(discount);
+  document.getElementById('grandKpi').textContent=currency(grand);
+}
+
+// ---- Presets modal (editable) ----
+function openPresets(){
+  renderPresetSection('cameras', 'camerasPresetList');
+  renderPresetSection('optics', 'opticsPresetList');
+  renderPresetSection('light', 'lightPresetList');
+  renderPresetSection('sound', 'soundPresetList');
+  renderPresetSection('tripods', 'tripodsPresetList');
+  renderPresetSection('stabilizers', 'stabilizersPresetList');
+  renderPresetSection('generic', 'genericPresetList');
+  renderPresetSection('post', 'postPresetList');
+  renderRolesSection();
+  document.getElementById('presetsDialog').showModal();
+}
+function closePresets(){ document.getElementById('presetsDialog').close(); }
+function resetPresets(){ localStorage.removeItem('pricePresets_v731'); localStorage.removeItem('customLists_v731'); openPresets(); }
+
+function renderPresetSection(key, mountId){
+  const presets = getPresets(); const customs = getCustomLists();
+  const base = (baseLists[key]||[]);
+  const list = [...base, ...(customs[key]||[])];
+  const box = document.getElementById(mountId); box.innerHTML='';
+  list.forEach((name, idx)=>{
+    const row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='1fr 140px 80px'; row.style.gap='8px'; row.style.marginBottom='8px';
+    const nameInput=document.createElement('input'); nameInput.type='text'; nameInput.value=name; nameInput.disabled = idx < base.length;
+    const priceInput=document.createElement('input'); priceInput.type='number'; priceInput.min='0'; priceInput.placeholder='₽/смена'; priceInput.value = presets[key][name] || 0;
+    const del=document.createElement('button'); del.className='btn ghost small'; del.textContent='Удалить'; del.disabled = idx < base.length;
+    del.onclick=()=>{
+      const cl = getCustomLists(); cl[key] = (cl[key]||[]).filter(n=>n!==name);
+      setCustomLists(cl);
+      const p = getPresets(); delete p[key][name]; setPresets(p);
+      renderPresetSection(key, mountId);
+    };
+    row.appendChild(nameInput); row.appendChild(priceInput); row.appendChild(del); box.appendChild(row);
+  });
+}
+function addPresetRow(key){
+  const customs = getCustomLists(); customs[key] = customs[key] || []; customs[key].push('Новая позиция');
+  setCustomLists(customs);
+  const p=getPresets(); p[key] = p[key] || {}; p[key]['Новая позиция']=0; setPresets(p);
+  renderPresetSection(key, key+'PresetList');
+}
+function renderRolesSection(){
+  const p=getPresets(); const customs=getCustomLists(); const base=(baseLists.roles||[]); const list=[...base, ...(customs.roles||[])];
+  const mount=document.getElementById('rolesPresetList'); mount.innerHTML='';
+  list.forEach((role, idx)=>{
+    const row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='1fr 140px 80px'; row.style.gap='8px'; row.style.marginBottom='8px';
+    const roleInput=document.createElement('input'); roleInput.type='text'; roleInput.value=role; roleInput.disabled = idx < base.length;
+    const rate=document.createElement('input'); rate.type='number'; rate.min='0'; rate.placeholder='₽/смена'; rate.value=p.roles[role]||0;
+    const del=document.createElement('button'); del.className='btn ghost small'; del.textContent='Удалить'; del.disabled = idx < base.length;
+    del.onclick=()=>{
+      const cl=getCustomLists(); cl.roles=(cl.roles||[]).filter(r=>r!==role); setCustomLists(cl);
+      const pr=getPresets(); delete pr.roles[role]; setPresets(pr);
+      renderRolesSection();
+    };
+    row.appendChild(roleInput); row.appendChild(rate); row.appendChild(del); mount.appendChild(row);
+  });
+}
+function addRoleRow(){
+  const cl=getCustomLists(); cl.roles=cl.roles||[]; cl.roles.push('Новая роль'); setCustomLists(cl);
+  const p=getPresets(); p.roles=p.roles||{}; p.roles['Новая роль']=0; setPresets(p);
+  renderRolesSection();
+}
+function savePresets(){
+  const p=getPresets(); const cl=getCustomLists();
+  const readSection=(key, mountId)=>{
+    const baseLen=(baseLists[key]||[]).length; const rows = document.querySelectorAll('#'+mountId+' > div');
+    const newCustom=[];
+    rows.forEach((row, idx)=>{
+      const [nameInput, priceInput] = row.querySelectorAll('input');
+      const name=nameInput.value.trim() || 'Без названия';
+      const price=parseFloat(priceInput.value)||0;
+      if(idx>=baseLen){ newCustom.push(name); }
+      p[key][name] = price;
+    });
+    cl[key]=newCustom;
+  };
+  readSection('cameras','camerasPresetList');
+  readSection('optics','opticsPresetList');
+  readSection('light','lightPresetList');
+  readSection('sound','soundPresetList');
+  readSection('tripods','tripodsPresetList');
+  readSection('stabilizers','stabilizersPresetList');
+  readSection('generic','genericPresetList');
+  readSection('post','postPresetList');
+
+  // roles
+  const baseLenRoles=(baseLists.roles||[]).length; const rowsR=document.querySelectorAll('#rolesPresetList > div');
+  const newRoles=[];
+  rowsR.forEach((row, idx)=>{
+    const [roleInput, rateInput] = row.querySelectorAll('input');
+    const role=roleInput.value.trim()||'Роль';
+    const rate=parseFloat(rateInput.value)||0;
+    if(idx>=baseLenRoles){ newRoles.push(role); }
+    p.roles[role]=rate;
+  });
+  cl.roles=newRoles;
+
+  setCustomLists(cl); setPresets(p);
+  closePresets();
+}
+
+// Autofill price on selection
+function autofillPriceFromPreset(selectedValue, row, type){
+  const p=getPresets();
+  const price = (p[type] && p[type][selectedValue] != null) ? p[type][selectedValue] : 0;
+  row.cells[1].textContent = String(price);
+}
+
+// ---- Categories ----
+const categoriesConf = [
+  { name: "Камеры",        shiftBased: true,  type: "cameras",      discountEligible: true },
+  { name: "Оптика",        shiftBased: true,  type: "optics",       discountEligible: true },
+  { name: "Свет",          shiftBased: true,  type: "light",        discountEligible: true },
+  { name: "Звук",          shiftBased: true,  type: "sound",        discountEligible: true },
+  { name: "Штативы",       shiftBased: true,  type: "tripods",      discountEligible: true },
+  { name: "Стабилизаторы", shiftBased: true,  type: "stabilizers",  discountEligible: true },
+  { name: "Люди",          shiftBased: true,  type: "roles",        discountEligible: true },
+  { name: "Другое",        shiftBased: true,  type: "generic",      discountEligible: true },
+  { name: "Постпродакшн",  shiftBased: false, type: "post",         discountEligible: false }
+];
+
+// ---- State ----
+function captureState(){
+  const state = {
+    projectName: document.getElementById('projectName').value || '',
+    clientName: document.getElementById('clientName').value || '',
+    shootLocation: document.getElementById('shootLocation').value || '',
+    fillDate: document.getElementById('fillDate').value || '',
+    shootDate: document.getElementById('shootDate').value || '',
+    comment: document.getElementById('comment').value || '',
+    shifts: document.getElementById('shifts').value || '1',
+    discountPct: document.getElementById('discountPct').value || '0',
+    categories: []
+  };
+  document.querySelectorAll('#categories > .card').forEach(card=>{
+    const cat = { name: card.querySelector('.cat-header h2').textContent, type: card.dataset.type, shiftBased: card.dataset.shiftBased === "1", discountEligible: card.dataset.discountEligible === "1", rows: [] };
+    card.querySelectorAll('tbody tr').forEach(tr=>{
+      cat.rows.push({
+        name: getNameFromCell(tr.cells[0]),
+        price: tr.cells[1].innerText.trim(),
+        qty: tr.cells[2].innerText.trim()
+      });
+    });
+    state.categories.push(cat);
+  });
+  return state;
+}
+function saveState(){ localStorage.setItem('estimateState_v731', JSON.stringify(captureState())); }
+function restoreState(){
+  try{
+    const raw = localStorage.getItem('estimateState_v731'); 
+    if(!raw){
+      document.getElementById('fillDate').value = new Date().toISOString().slice(0,10);
+      return;
+    }
+    const st = JSON.parse(raw);
+    document.getElementById('projectName').value = st.projectName || '';
+    document.getElementById('clientName').value = st.clientName || '';
+    document.getElementById('shootLocation').value = st.shootLocation || '';
+    document.getElementById('fillDate').value = st.fillDate || new Date().toISOString().slice(0,10);
+    document.getElementById('shootDate').value = st.shootDate || '';
+    document.getElementById('comment').value = st.comment || '';
+    document.getElementById('shifts').value = st.shifts || '1';
+    document.getElementById('discountPct').value = st.discountPct || '0';
+    const cards = document.querySelectorAll('#categories > .card');
+    st.categories.forEach((cat, idx)=>{
+      const card = cards[idx]; if(!card) return;
+      const addBtn = card.querySelector('.cat-header .btn.small');
+      (cat.rows||[]).forEach(()=>addRow(addBtn));
+      const trs = card.querySelectorAll('tbody tr');
+      (cat.rows||[]).forEach((r, i)=>{
+        const tdName = trs[i].cells[0];
+        const sel = tdName.querySelector('select'); const input = tdName.querySelector('input');
+        if(sel){
+          const optionsArr = [...sel.options].map(o=>o.value);
+          if(optionsArr.includes(r.name)){ sel.value = r.name; input && (input.style.display='none'); }
+          else { sel.value = "Другое…"; input && (input.style.display='block', input.value=r.name); }
+        } else { tdName.textContent = r.name || 'Новая позиция'; }
+        trs[i].cells[1].textContent = r.price || '0';
+        trs[i].cells[2].textContent = r.qty || '1';
+      });
+    });
+  }catch(e){ console.warn('restore failed', e); }
+}
+
+// init
+function init(){
+  categoriesConf.forEach(createCategory);
+  restoreState();
+  const anyRow = document.querySelector('#categories tbody tr');
+  if(!anyRow){
+    document.getElementById('fillDate').value = new Date().toISOString().slice(0,10);
+    document.querySelectorAll(".cat-header .btn.small").forEach(b=>addRow(b));
+  }
+  updateTotals();
+}
+init();
+
+// ---- Export (Word-HTML, portrait A4) with grouping ----
+function buildWordHTML(){
+  const css = `
+  <meta charset="UTF-8">
+  <style>
+    @page { size: A4 portrait; margin: 20mm; }
+    :root{ --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --chip:#f3f4f6; --accent:#7c3aed; }
+    body{ font-family: Arial, Helvetica, sans-serif; color:var(--ink); margin:0; }
+    .page{ max-width: 800px; margin: 0 auto; }
+    h1{ font-size:22px; margin:0 0 8px; }
+    h2{ font-size:14px; margin:16px 0 8px; padding:6px 10px; display:inline-block; background:var(--chip); border-radius:10px; color:#111; }
+    .meta{ color:var(--muted); font-size:12px; }
+    .hr{ height:1px; background:var(--line); margin:12px 0; }
+    table{ width:100%; border-collapse:separate; border-spacing:0; margin:6px 0; table-layout:fixed; }
+    col.name{ width:46%; } col.price{ width:18%; } col.qty{ width:12%; } col.sum{ width:14%; }
+    th, td{ border:1px solid var(--line); padding:8px 10px; font-size:12px; vertical-align:top; }
+    th{ background:#fafafa; color:#111; text-align:left; }
+    td:first-child{ word-break:break-word; white-space:normal; }
+    td.price, td.qty, td.sum{ text-align:right; font-variant-numeric: tabular-nums; }
+    .total{ text-align:right; margin:8px 0 14px; font-weight:bold; }
+    .totals{ margin-top:10px; }
+    .totals .row{ display:flex; justify-content:flex-end; gap:18px; }
+    .totals .label{ color:var(--muted); }
+    .totals .value{ min-width:140px; text-align:right; font-weight:bold; }
+    .brand{ color:var(--accent); font-weight:bold; }
+    .comment{ margin-top:12px; color:#111; }
+  </style>`;
+
+  const project = document.getElementById('projectName').value || 'Без названия';
+  const client = document.getElementById('clientName').value || '—';
+  const location = document.getElementById('shootLocation').value || '—';
+  const fillDate = document.getElementById('fillDate').value ? new Date(document.getElementById('fillDate').value).toLocaleDateString('ru-RU') : new Date().toLocaleDateString('ru-RU');
+  const shootDate = document.getElementById('shootDate').value ? new Date(document.getElementById('shootDate').value).toLocaleDateString('ru-RU') : '—';
+  const comment = document.getElementById('comment').value || '';
+
+  updateTotals();
+
+  function renderGroup(title, typeFilter){
+    let html = `<h2>${title}</h2>`;
+    let groupTotal = 0;
+    document.querySelectorAll('#categories > .card').forEach(card=>{
+      const type = card.dataset.type;
+      if(!typeFilter(type)) return;
+      const catName = card.querySelector('.cat-header h2').textContent;
+      const rows = [];
+      card.querySelectorAll('tbody tr').forEach(tr=>{
+        const name = (function(td){ const sel=td.querySelector('select'); if(sel){ if(sel.value==="Другое…"){ const input=td.querySelector('input'); return (input&&input.value.trim())?input.value.trim():"Другое"; } return sel.value; } return td.textContent.trim(); })(tr.cells[0]);
+        const price = tr.cells[1].innerText.trim();
+        const qty = tr.cells[2].innerText.trim();
+        const sum = tr.cells[3].innerText.trim();
+        rows.push({name,price,qty,sum});
+      });
+      if(!rows.length) return;
+      html += `<div style="font-weight:bold; margin:6px 0 4px;">${catName}</div>`;
+      html += `<table><colgroup><col class="name"><col class="price"><col class="qty"><col class="sum"></colgroup>`;
+      html += `<thead><tr><th>Название</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr></thead><tbody>`;
+      let catTotal = 0;
+      rows.forEach(r=>{
+        const sumNum = Number(r.sum)||0;
+        const sumFmt = sumNum.toLocaleString('ru-RU') + ' ₽';
+        html += `<tr><td>${r.name||'—'}</td><td class="price">${r.price}</td><td class="qty">${r.qty}</td><td class="sum">${sumFmt}</td></tr>`;
+        catTotal += sumNum;
+      });
+      html += `</tbody></table>`;
+      html += `<div class="total">Итого (${catName}): ${(catTotal).toLocaleString('ru-RU')} ₽</div>`;
+      groupTotal += catTotal;
+    });
+    html += `<div class="total">Итого (${title}): ${groupTotal.toLocaleString('ru-RU')} ₽</div>`;
+    return { html, groupTotal };
+  }
+
+  let doc = `<html><head>${css}</head><body><div class="page">`;
+  doc += `<h1>${project}</h1>`;
+  doc += `<div class="meta">Клиент: ${client} &nbsp;&nbsp;|&nbsp;&nbsp; Локация: ${location}</div>`;
+  doc += `<div class="meta">Дата заполнения: ${fillDate} &nbsp;&nbsp;|&nbsp;&nbsp; Дата съёмки: ${shootDate}</div>`;
+  doc += `<div class="hr"></div>`;
+
+  const peopleGroup = renderGroup('Люди', (t)=> t==='roles');
+  doc += peopleGroup.html;
+
+  const equipGroup = renderGroup('Оборудование', (t)=> t!=='roles' && t!=='post');
+  doc += equipGroup.html;
+
+  const postGroup = renderGroup('Постпродакшн', (t)=> t==='post');
+  doc += postGroup.html;
+
+  doc += `<div class="hr"></div>`;
+  doc += `<div class="totals">`;
+  doc += `<div class="row"><div class="label">Подытог:</div><div class="value">${document.getElementById('subtotalKpi').textContent}</div></div>`;
+  doc += `<div class="row"><div class="label">Скидка:</div><div class="value">${document.getElementById('discountKpi').textContent}</div></div>`;
+  doc += `<div class="row"><div class="label">Итого за проект:</div><div class="value">${document.getElementById('grandKpi').textContent}</div></div>`;
+  doc += `</div>`;
+
+  if(comment){
+    doc += `<div class="hr"></div><div class="comment"><strong>Комментарий:</strong><br>${comment.replace(/\\n/g,'<br>')}</div>`;
+  }
+
+  doc += `</div></body></html>`;
+  return doc;
+}
+function downloadWordHTML(){
+  const html = buildWordHTML();
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const a = document.createElement('a');
+  const name = (document.getElementById('projectName').value || 'smeta') + ".html";
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+</script>
+</body>
+</html>
